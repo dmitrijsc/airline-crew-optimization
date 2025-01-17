@@ -1,4 +1,3 @@
-import json
 import requests
 import pytz
 from datetime import datetime, timedelta
@@ -12,8 +11,12 @@ class Flight:
         self.flight_number = flight_number
         self.duration = duration
 
+    def get_id(self):
+        return self.flight_number
+
 class FlightData:
-    def __init__(self):
+    def __init__(self, base_airports):
+        self.base_airports = base_airports
         self.flights = []
 
     def parse_datetime(self, dt_string):
@@ -29,9 +32,8 @@ class FlightData:
         return int(time_difference.total_seconds() / 60)
 
     def read_flights(self):
-        self.read_route_flights('https://api.airbaltic.com/schedule/live/orig/RIX')
-        self.read_route_flights('https://api.airbaltic.com/schedule/live/orig/VNO')
-        self.read_route_flights('https://api.airbaltic.com/schedule/live/orig/TLL')
+        for base_airport in self.base_airports:
+            self.read_route_flights(f'https://api.airbaltic.com/schedule/live/orig/{base_airport}')
 
     def read_route_flights(self, url):
         response = requests.get(url)
@@ -70,11 +72,25 @@ class FlightData:
                         dest=leg['orig'],
                         depart=arrival_time + timedelta(hours=1),
                         arrival=arrival_time + timedelta(hours=1) + timedelta(minutes=duration),
-                        flight_number=leg['flightNumber'],
+                        flight_number=leg['flightNumber'] + 'R',
                         duration=duration
                     )
 
                     self.flights.append(return_flight)
+            
+                # sort flights by departure time asc
+                # Remove duplicates based on flight_number, orig, and depart
+                self.flights.sort(key=lambda x: x.depart)
+
+                unique_flights = {}
+                for flight in self.flights:
+                    key = (flight.flight_number, flight.orig, flight.depart)
+                    if key not in unique_flights:
+                        unique_flights[key] = flight
+
+                # Update self.flights with unique flights and sort by departure time
+                self.flights = list(unique_flights.values())
+
                     
         else:
             print(f"Failed to fetch data from API. Status code: {response.status_code}")
