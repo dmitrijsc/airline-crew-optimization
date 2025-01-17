@@ -8,7 +8,7 @@ docker build -t airline-crew-mgmt .
 
 Run docker image
 ```
-docker run -it -v $(pwd).:/mounted --rm airline-crew-mgmt
+docker run -it -v $(pwd):/mounted --rm airline-crew-mgmt
 
 cd /mounted
 python main.py
